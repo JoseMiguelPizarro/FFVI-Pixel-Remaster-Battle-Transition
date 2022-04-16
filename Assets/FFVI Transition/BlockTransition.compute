@@ -1,0 +1,33 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel GetBlocksPositions_Kernel
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+
+RWStructuredBuffer<float3> positionsBuffer;
+int columns;
+int rows;
+
+float blockSize;
+float4x4 invViewMatrix;
+float2 screenSize;
+
+float3 worldPositionFromScreenPosition(float2 screenPosition, float z)
+{
+    float3 p = mul(invViewMatrix, float4(screenPosition, 0, -0.001));
+
+    return p;
+}
+
+[numthreads(8,8,1)]
+void GetBlocksPositions_Kernel(uint3 id : SV_DispatchThreadID)
+{
+    float2 offset = float2(blockSize, blockSize) * 0.5f / screenSize;
+
+    float2 uv = float2(id.x, id.y) / float2(columns, rows) + offset;
+    uint blockId = id.x + id.y * columns;
+
+    uint sizex, sizey;
+    positionsBuffer.GetDimensions(sizex, sizey);
+    positionsBuffer[blockId] = worldPositionFromScreenPosition((uv - 0.5) * 2.0, 1);
+}
